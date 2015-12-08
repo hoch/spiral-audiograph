@@ -72,7 +72,7 @@
           // Add uid for destination AudioParam.
           destination._uid = destination.parentNode._uid + '.' + destination.paramName;
           this._nodes.push(destination);
-          
+
           this._dispatchEvent('connected-param', source, destination);
           return;
         }
@@ -129,7 +129,10 @@
 
   // Minitask for replacing factory method.
   function replaceFactory(prototype, method) {
+    // Caching the original factory.
     prototype['_' + method] = prototype[method];
+
+    // Override the factory method.
     prototype[method] = function () {
       var node = this['_' + method].apply(this, arguments);
 
@@ -143,6 +146,7 @@
 
       // Add the node to the context's storage and fire event.
       this._addNode(node);
+
       return node;
     };
   }
@@ -153,20 +157,11 @@
 
     // Override 'create*' factory methods.
     for (var method in prototype) {
-      if (method.indexOf('create') === -1)
+      if (method.indexOf('create') === -1 || method.indexOf('_') > -1)
         continue;
 
       replaceFactory(prototype, method);
     }
-
-    // Wrap the context with node/connection storage.
-    window[contextName] = function () {
-      var context = new AG[contextName];
-      context._nodes = [];
-      context._connections = {};
-      context._addNode(context.destination);
-      return context;
-    };
   }
 
   overridePrototype(AudioNode.prototype, 'connect', function () {
@@ -180,23 +175,24 @@
   });
 
   Object.defineProperties(AudioContext.prototype, contextExtension);
-  Object.defineProperties(OfflineAudioContext.prototype, contextExtension);
-
   wrapContextForAudioNodeFactory('AudioContext');
-  wrapContextForAudioNodeFactory('OfflineAudioContext');
+
+  // TODO: this is not necessary.
+  // Object.defineProperties(OfflineAudioContext.prototype, contextExtension);
+  // wrapContextForAudioNodeFactory('OfflineAudioContext');
 
 
   // Public methods.
   Object.defineProperties(SpiralAudioGraph, {
-    
+
     // Start track a specified context.
     trackContext: {
       value: function (context) {
         currentContext = context;
-
-        // Include the destination node because the destination node is created
-        // before tracking.
-        context._dispatchEvent('created', context.destination);
+        context._isTracked = true;
+        context._nodes = [];
+        context._connections = {};
+        context._addNode(context.destination);
       }
     },
 
@@ -211,7 +207,10 @@
       value: function () {
         if (!currentContext)
           return;
-        
+
+        currentContext._isTracked = null;
+        currentContext._nodes = null;
+        currentContext._connections = null;
         currentContext = null;
       }
     }

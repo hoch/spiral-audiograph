@@ -64,7 +64,8 @@
     </div>
 
     <script>
-      window.addEventListener('WebComponentsReady', function () {
+
+      function demo1() {
         var audiograph = document.querySelector('#my-graph');
         var context = new AudioContext();
 
@@ -121,7 +122,33 @@
         amp.gain.value = 0.5;
 
         audiograph.draw();
-      });
+      }
+
+      function demo2() {
+        var audiograph = document.querySelector('#my-graph');
+
+        var context = new OfflineAudioContext(1, 44100, 44100);
+
+        audiograph.trackContext(context);
+
+        var osc = context.createOscillator();
+        var gain = context.createGain();
+
+        osc.frequency.setValueAtTime(261.6, 0.0);
+        gain.gain.value = 0.5;
+
+        osc.connect(gain);
+        gain.connect(context.destination);
+
+        osc.start();
+        osc.stop(1.0);
+
+        context.startRendering();
+        
+        audiograph.draw();
+      }
+
+      window.addEventListener('WebComponentsReady', demo1);
     </script>
 
   </body>
